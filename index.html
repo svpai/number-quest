@@ -168,18 +168,29 @@
       container.innerHTML = '';
       finalMessage.textContent = '';
 
-      if (q.type === "name-to-digit") {
-        q.digits.forEach((digit, index) => {
+      if (q.type === "name-to-digit" || q.type === "digit-to-name") {
+        const answerArray = q.type === "name-to-digit" ? q.digits : q.answer;
+        const maskArray = q.type === "digit-to-name" ? q.masked : null;
+        answerArray.forEach((expectedChar, i) => {
+          if (maskArray && maskArray[i] !== '_') {
+            const span = document.createElement('span');
+            span.textContent = maskArray[i];
+            span.style.fontSize = '24px';
+            span.style.padding = '6px';
+            container.appendChild(span);
+            return;
+          }
           const input = document.createElement('input');
           input.type = 'text';
           input.maxLength = 1;
           input.className = 'letter-input';
-          input.dataset.index = index;
+          input.dataset.index = i;
+          input.dataset.expected = expectedChar;
           input.addEventListener('input', () => {
-            if (input.value === q.digits[index]) {
+            if (input.value.toLowerCase() === input.dataset.expected.toLowerCase()) {
               input.classList.add('correct');
               input.classList.remove('wrong');
-              const next = container.querySelector(`input[data-index='${index + 1}']`);
+              const next = container.querySelector(`input[data-index='${i + 1}']`);
               if (next) next.focus();
               else {
                 correctSound.play();
@@ -192,41 +203,6 @@
             }
           });
           container.appendChild(input);
-        });
-        container.querySelector('input').focus();
-      } else if (q.type === "digit-to-name") {
-        q.masked.forEach((char, index) => {
-          if (char === '_') {
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.maxLength = 1;
-            input.className = 'letter-input';
-            input.dataset.index = index;
-            input.dataset.expected = q.answer[index];
-            input.addEventListener('input', () => {
-              if (input.value.toLowerCase() === input.dataset.expected) {
-                input.classList.add('correct');
-                input.classList.remove('wrong');
-                const next = container.querySelector(`input[data-index='${+index + 1}']`);
-                if (next) next.focus();
-                else {
-                  correctSound.play();
-                  setTimeout(nextQuestion, 300);
-                }
-              } else {
-                input.classList.add('wrong');
-                input.classList.remove('correct');
-                input.select();
-              }
-            });
-            container.appendChild(input);
-          } else {
-            const span = document.createElement('span');
-            span.textContent = char;
-            span.style.fontSize = '24px';
-            span.style.padding = '6px';
-            container.appendChild(span);
-          }
         });
         const firstInput = container.querySelector('input');
         if (firstInput) firstInput.focus();
