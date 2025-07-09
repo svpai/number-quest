@@ -186,7 +186,7 @@
     const q = questions[current];
     document.getElementById('question-title').textContent = `Question ${current + 1} of ${questions.length}`;
     document.getElementById('question-label').textContent = q.type.replace(/-/g, ' ').toUpperCase();
-    document.getElementById('question-content').textContent = q.type === 'digit-to-name' ? q.masked : q.question;
+    document.getElementById('question-content').textContent = q.question;
 
     const container = document.getElementById('answer-container');
     container.innerHTML = '';
