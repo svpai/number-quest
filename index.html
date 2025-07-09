@@ -96,6 +96,14 @@
 
     const container = document.getElementById('answer-container');
 
+    function goToNextQuestion() {
+      // You can replace this with logic to go to the next question
+      document.getElementById('question-title').textContent = 'Next Question...';
+      document.getElementById('question-label').textContent = '';
+      document.getElementById('question-content').textContent = '';
+      container.innerHTML = '<p>Loading next question...</p>';
+    }
+
     question.entries.forEach(([label, value]) => {
       const btn = document.createElement('button');
       btn.className = 'choice-button';
@@ -104,7 +112,7 @@
         if (label === question.answer) {
           btn.classList.add('correct');
           document.getElementById('correct-sound').play();
-          setTimeout(() => alert('Correct!'), 300);
+          setTimeout(goToNextQuestion, 500);
         } else {
           btn.classList.add('wrong');
           setTimeout(() => btn.classList.remove('wrong'), 500);
