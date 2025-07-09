@@ -70,7 +70,6 @@
       padding: 4px 8px;
       border-radius: 8px;
       border: 2px solid #888;
-      width: auto;
       min-width: 60px;
       text-align: center;
       cursor: pointer;
@@ -82,15 +81,6 @@
     .text-input.wrong {
       border-color: red;
       background-color: #ffd6d6;
-    }
-    .celebration {
-      font-size: 32px;
-      animation: pop 0.5s ease-in-out infinite alternate;
-      color: #ff4500;
-    }
-    @keyframes pop {
-      from { transform: scale(1); }
-      to { transform: scale(1.1); }
     }
   </style>
 </head>
@@ -247,36 +237,48 @@
         input.focus();
 
       } else if (q.type === "digit-to-name") {
+        const inputs = [];
         q.masked.split('').forEach((char, i) => {
           const input = document.createElement('input');
           input.maxLength = 1;
           input.className = 'letter-input';
           if (char === '_') {
             input.dataset.expected = q.answer[i];
-            input.addEventListener('keydown', (e) => {
-              if (e.key.length === 1) {
-                const expected = input.dataset.expected.toLowerCase();
-                if (e.key.toLowerCase() === expected) {
-                  input.value = e.key;
-                  input.classList.add('correct');
-                  input.classList.remove('wrong');
-                  sound.play();
-                  const allFilled = [...container.children].every(inp => inp.classList.contains('correct') || inp.disabled);
-                  if (allFilled) {
-                    setTimeout(() => { current++; renderQuestion(); }, 500);
-                  }
+            input.addEventListener('input', (e) => {
+              const val = e.target.value.toLowerCase();
+              const expected = input.dataset.expected.toLowerCase();
+              if (val === expected) {
+                input.classList.add('correct');
+                input.classList.remove('wrong');
+                sound.play();
+                const next = inputs[inputs.indexOf(input) + 1];
+                if (next) {
+                  next.focus();
                 } else {
-                  input.classList.add('wrong');
-                  input.select();
+                  const allCorrect = inputs.every(inp => inp.classList.contains('correct'));
+                  if (allCorrect) {
+                    setTimeout(() => {
+                      current++;
+                      renderQuestion();
+                    }, 500);
+                  }
                 }
+              } else {
+                input.classList.remove('correct');
+                input.classList.add('wrong');
+                input.select();
               }
             });
           } else {
             input.value = char;
             input.disabled = true;
           }
+          inputs.push(input);
           container.appendChild(input);
         });
+
+        const firstEditable = inputs.find(i => !i.disabled);
+        if (firstEditable) firstEditable.focus();
 
       } else if (q.type === "comparison") {
         const options = ['>', '<', '='];
