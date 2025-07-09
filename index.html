@@ -99,24 +99,17 @@
 <audio id="correct-sound" src="https://www.soundjay.com/buttons/sounds/button-10.mp3" preload="auto"></audio>
 
 <script>
-  const numberWordMap = {
-    1000: "One thousand",
-    1001: "One thousand one",
-    1020: "One thousand twenty",
-    1100: "One thousand one hundred",
-    1234: "One thousand two hundred thirty four",
-    1500: "One thousand five hundred",
-    1999: "One thousand nine hundred ninety nine",
-    2024: "Two thousand twenty four",
-    3001: "Three thousand one",
-    4321: "Four thousand three hundred twenty one",
-    5555: "Five thousand five hundred fifty five",
-    6789: "Six thousand seven hundred eighty nine",
-    7890: "Seven thousand eight hundred ninety",
-    8008: "Eight thousand eight",
-    9000: "Nine thousand",
-    9999: "Nine thousand nine hundred ninety nine"
-  };
+  function numberToWords(num) {
+    const a = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"];
+    const b = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];
+
+    if (num < 20) return a[num];
+    if (num < 100) return b[Math.floor(num / 10)] + (num % 10 !== 0 ? " " + a[num % 10] : "");
+    if (num < 1000)
+      return a[Math.floor(num / 100)] + " hundred" + (num % 100 !== 0 ? " " + numberToWords(num % 100) : "");
+    if (num < 10000)
+      return a[Math.floor(num / 1000)] + " thousand" + (num % 1000 !== 0 ? " " + numberToWords(num % 1000) : "");
+  }
 
   function hideHalfLetters(word) {
     const chars = word.split('');
@@ -128,19 +121,18 @@
   }
 
   function generateQuestions() {
-    const keys = Object.keys(numberWordMap).map(k => parseInt(k));
     const questions = [];
 
     for (let i = 0; i < 20; i++) {
       const type = ["name-to-digit", "digit-to-name", "comparison", "sequence", "largest", "smallest"][(Math.random() * 6) | 0];
 
       if (type === "name-to-digit") {
-        const num = keys[Math.random() * keys.length | 0];
-        questions.push({ type, question: numberWordMap[num], answer: String(num) });
+        const num = 1000 + Math.floor(Math.random() * 9000);
+        questions.push({ type, question: numberToWords(num), answer: String(num) });
 
       } else if (type === "digit-to-name") {
-        const num = keys[Math.random() * keys.length | 0];
-        const word = numberWordMap[num];
+        const num = 1000 + Math.floor(Math.random() * 9000);
+        const word = numberToWords(num);
         const { masked, missing } = hideHalfLetters(word);
         questions.push({ type, question: String(num), masked, answer: word, missing });
 
@@ -161,7 +153,7 @@
         });
 
       } else if (type === "largest" || type === "smallest") {
-        const sample = keys.sort(() => 0.5 - Math.random()).slice(0, 4);
+        const sample = Array.from({length: 4}, () => 1000 + Math.floor(Math.random() * 9000));
         const labels = ['a', 'b', 'c', 'd'];
         const entries = labels.map((l, i) => [l, sample[i]]);
         const ans = entries.reduce((acc, cur) =>
