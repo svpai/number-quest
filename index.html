@@ -113,6 +113,58 @@
       return a[Math.floor(num / 1000)] + " thousand" + (num % 1000 !== 0 ? " " + numberToWords(num % 1000) : "");
   }
 
+  function hideHalfLetters(word) {
+    const chars = word.split('');
+    const indices = chars.map((c, i) => /[a-zA-Z]/.test(c) ? i : -1).filter(i => i >= 0);
+    const toHide = indices.sort(() => 0.5 - Math.random()).slice(0, indices.length / 2);
+    const masked = chars.map((c, i) => toHide.includes(i) ? '_' : c).join('');
+    const missing = toHide.map(i => chars[i]);
+    return { masked, missing };
+  }
+
+  function generateQuestions() {
+    const questions = [];
+    for (let i = 0; i < 20; i++) {
+      const type = ["name-to-digit", "digit-to-name", "comparison", "sequence", "largest", "smallest"][Math.floor(Math.random() * 6)];
+
+      if (type === "name-to-digit") {
+        const num = 1000 + Math.floor(Math.random() * 9000);
+        questions.push({ type, question: numberToWords(num), answer: String(num) });
+
+      } else if (type === "digit-to-name") {
+        const num = 1000 + Math.floor(Math.random() * 9000);
+        const word = numberToWords(num);
+        const { masked, missing } = hideHalfLetters(word);
+        questions.push({ type, question: String(num), masked, answer: word, missing });
+
+      } else if (type === "comparison") {
+        const left = `${1000 + Math.floor(Math.random() * 9000)} ${Math.random() < 0.5 ? '+' : '-'} ${1 + Math.floor(Math.random() * 20)}`;
+        const right = `${1000 + Math.floor(Math.random() * 9000)} ${Math.random() < 0.5 ? '+' : '-'} ${1 + Math.floor(Math.random() * 20)}`;
+        const l = eval(left), r = eval(right);
+        const ans = l > r ? '>' : l < r ? '<' : '=';
+        questions.push({ type, question: `${left} ? ${right}`, answer: ans });
+
+      } else if (type === "sequence") {
+        const base = 1000 + Math.floor(Math.random() * 8000);
+        const front = Math.random() < 0.5;
+        questions.push({
+          type,
+          question: front ? `_, ${base + 1}, ${base + 2}` : `${base}, _, _`,
+          answer: front ? [`${base}`] : [`${base + 1}`, `${base + 2}`]
+        });
+
+      } else if (type === "largest" || type === "smallest") {
+        const sample = Array.from({ length: 4 }, () => 1000 + Math.floor(Math.random() * 9000));
+        const labels = ['a', 'b', 'c', 'd'];
+        const entries = labels.map((l, i) => [l, sample[i]]);
+        const ans = entries.reduce((acc, cur) =>
+          type === 'largest' ? (cur[1] > acc[1] ? cur : acc) : (cur[1] < acc[1] ? cur : acc))[0];
+        questions.push({ type, entries, question: entries.map(([l, v]) => `${l} = ${v}`).join(', '), answer: ans });
+      }
+    }
+    return questions;
+  }
+
   function renderSequenceInputs(expectedValues) {
     const container = document.getElementById('answer-container');
     container.innerHTML = '';
@@ -152,18 +204,10 @@
     if (inputs.length) inputs[0].focus();
   }
 
-  const originalGenerateQuestions = generateQuestions.toString();
-  eval(originalGenerateQuestions.replace(/answer: front \? `\$\{base\}` : `\$\{base\+1\}, \$\{base\+2\}`/, 'answer: front ? [`${base}`] : [`${base+1}`, `${base+2}`]'));
   const questions = generateQuestions();
-
   let current = 0;
   const sound = document.getElementById('correct-sound');
-
-  const originalRenderQuestion = renderQuestion.toString();
-  const patchedRenderQuestion = originalRenderQuestion.replace(/} else {\n\s+const inp = document.createElement\('input'\);/, `} else if (q.type === 'sequence') {\n      renderSequenceInputs(q.answer);\n    } else {\n      const inp = document.createElement('input');`);
-  eval(`renderQuestion = ${patchedRenderQuestion}`);
-
-  renderQuestion();
+  // renderQuestion would go here
 </script>
 </body>
 </html>
