@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF" />
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Jungle Math Quest</title>
   <style>
@@ -46,7 +46,6 @@
       flex-wrap: wrap;
       justify-content: center;
       gap: 8px;
-      flex-direction: row;
     }
     .letter-input {
       width: 32px;
@@ -66,47 +65,27 @@
       border-color: red;
       background-color: #ffd6d6;
     }
-    .text-input {
-      font-size: 24px;
-      padding: 4px 8px;
-      border-radius: 8px;
-      border: 2px solid #888;
-      min-width: 60px;
-      text-align: center;
-      cursor: pointer;
-    }
-    .text-input.correct {
-      border-color: green;
-      background-color: #d4f8d4;
-    }
-    .text-input.wrong {
-      border-color: red;
-      background-color: #ffd6d6;
-    }
     .static-char {
       font-size: 24px;
       padding: 6px;
       font-weight: bold;
-      display: inline-block;
-      min-width: 10px;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1 id="question-title">Question 1 of 20</h1>
-    <div id="question-label"></div>
-    <div id="question-content"></div>
+    <h1 id="question-title">Question 1 of 1</h1>
+    <div id="question-label">DIGIT TO NAME</div>
+    <div id="question-content">1234</div>
     <div id="answer-container" class="answer-box"></div>
   </div>
-
   <audio id="correct-sound" src="https://www.soundjay.com/buttons/sounds/button-10.mp3" preload="auto"></audio>
 
   <script>
     function numberToWords(num) {
       const a = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
-                 "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen",
-                 "seventeen", "eighteen", "nineteen"];
+        "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen",
+        "seventeen", "eighteen", "nineteen"];
       const b = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];
       if (num < 20) return a[num];
       if (num < 100) return b[Math.floor(num / 10)] + (num % 10 ? " " + a[num % 10] : "");
@@ -122,131 +101,81 @@
       return { masked };
     }
 
-    function generateQuestions() {
-      const questions = [];
-      for (let i = 0; i < 20; i++) {
-        const type = ["name-to-digit", "digit-to-name", "comparison", "sequence", "largest", "smallest"][Math.floor(Math.random() * 6)];
-        if (type === "name-to-digit") {
-          const num = 1000 + Math.floor(Math.random() * 9000);
-          questions.push({ type, question: numberToWords(num), answer: String(num) });
-        } else if (type === "digit-to-name") {
-          const num = 1000 + Math.floor(Math.random() * 9000);
-          const word = numberToWords(num);
-          const { masked } = hideHalfLetters(word);
-          questions.push({ type, question: String(num), masked, answer: word });
-        } else if (type === "comparison") {
-          const left = `${1000 + Math.floor(Math.random() * 9000)} ${Math.random() < 0.5 ? '+' : '-'} ${1 + Math.floor(Math.random() * 20)}`;
-          const right = `${1000 + Math.floor(Math.random() * 9000)} ${Math.random() < 0.5 ? '+' : '-'} ${1 + Math.floor(Math.random() * 20)}`;
-          const l = eval(left), r = eval(right);
-          const ans = l > r ? '>' : l < r ? '<' : '=';
-          questions.push({ type, question: `${left} ? ${right}`, answer: ans });
-        } else if (type === "sequence") {
-          const base = 1000 + Math.floor(Math.random() * 8000);
-          const front = Math.random() < 0.5;
-          questions.push({
-            type,
-            question: front ? `_, ${base + 1}, ${base + 2}` : `${base}, _, _`,
-            answer: front ? [`${base}`] : [`${base + 1}`, `${base + 2}`]
-          });
-        } else if (type === "largest" || type === "smallest") {
-          const sample = Array.from({ length: 4 }, () => 1000 + Math.floor(Math.random() * 9000));
-          const labels = ['a', 'b', 'c', 'd'];
-          const entries = labels.map((l, i) => [l, sample[i]]);
-          const ans = entries.reduce((acc, cur) =>
-            type === 'largest' ? (cur[1] > acc[1] ? cur : acc) : (cur[1] < acc[1] ? cur : acc))[0];
-          questions.push({ type, entries, question: entries.map(([l, v]) => `${l} = ${v}`).join(', '), answer: ans });
-        }
-      }
-      return questions;
-    }
-
-    const questions = generateQuestions();
-    let current = 0;
-    const sound = document.getElementById('correct-sound');
-
-    function renderQuestion() {
-      const q = questions[current];
+    function renderDigitToName(question, answer) {
       const container = document.getElementById('answer-container');
       container.innerHTML = '';
-      document.getElementById('question-title').textContent = `Question ${current + 1} of ${questions.length}`;
-      document.getElementById('question-label').textContent = q.type.replace(/-/g, ' ').toUpperCase();
-      document.getElementById('question-content').textContent = q.question;
+      const { masked } = hideHalfLetters(answer);
+      const expected = answer.split('');
+      const inputs = [];
 
-      if (q.type === 'digit-to-name') {
-        const chars = q.masked.split('');
-        const expected = q.answer.split('');
-        const inputs = [];
+      masked.split('').forEach((char, i) => {
+        if (char === ' ') {
+          const span = document.createElement('span');
+          span.className = 'static-char';
+          span.innerHTML = '&nbsp;';
+          container.appendChild(span);
+          inputs.push(null);
+        } else if (char === '_') {
+          const input = document.createElement('input');
+          input.className = 'letter-input';
+          input.maxLength = 1;
+          input.dataset.index = i;
+          input.dataset.expected = expected[i];
 
-        chars.forEach((ch, i) => {
-          if (ch === ' ') {
-            const span = document.createElement('span');
-            span.className = 'static-char';
-            span.innerHTML = '&nbsp;';
-            container.appendChild(span);
-            inputs.push(null);
-          } else if (ch === '_') {
-            const input = document.createElement('input');
-            input.className = 'letter-input';
-            input.maxLength = 1;
-            input.dataset.index = i;
-            input.dataset.expected = expected[i];
-            input.addEventListener('input', () => {
-              const val = input.value.toLowerCase();
-              const exp = input.dataset.expected.toLowerCase();
-              if (val === exp) {
-                input.classList.remove('wrong');
-                input.classList.add('correct');
-                sound.play();
-                focusNext(inputs, i);
-                checkCompletion(inputs);
-              } else {
-                input.classList.remove('correct');
-                input.classList.add('wrong');
-                input.select();
-              }
-            });
-            inputs.push(input);
-            container.appendChild(input);
-          } else {
-            const input = document.createElement('input');
-            input.className = 'letter-input';
-            input.value = ch;
-            input.disabled = true;
-            inputs.push(null);
-            container.appendChild(input);
-          }
-        });
-
-        const first = inputs.find(i => i && !i.disabled);
-        if (first) first.focus();
-
-        function focusNext(inputs, currentIndex) {
-          for (let j = currentIndex + 1; j < inputs.length; j++) {
-            if (inputs[j] && !inputs[j].disabled) {
-              inputs[j].focus();
-              break;
+          input.addEventListener('input', () => {
+            const val = input.value.toLowerCase();
+            const exp = input.dataset.expected.toLowerCase();
+            if (val === exp) {
+              input.classList.remove('wrong');
+              input.classList.add('correct');
+              document.getElementById('correct-sound').play();
+              focusNext(inputs, i);
+              checkComplete();
+            } else {
+              input.classList.remove('correct');
+              input.classList.add('wrong');
+              input.select();
             }
-          }
-        }
+          });
 
-        function checkCompletion(inputs) {
-          const allCorrect = inputs.every(inp =>
-            !inp || inp.disabled || inp.classList.contains('correct')
-          );
-          if (allCorrect) {
-            setTimeout(() => {
-              current++;
-              if (current < questions.length) renderQuestion();
-              else alert("Well done! All questions complete!");
-            }, 500);
+          inputs.push(input);
+          container.appendChild(input);
+        } else {
+          const input = document.createElement('input');
+          input.className = 'letter-input';
+          input.value = char;
+          input.disabled = true;
+          inputs.push(null);
+          container.appendChild(input);
+        }
+      });
+
+      const first = inputs.find(i => i && !i.disabled);
+      if (first) first.focus();
+
+      function focusNext(list, fromIndex) {
+        for (let j = fromIndex + 1; j < list.length; j++) {
+          if (list[j] && !list[j].disabled) {
+            list[j].focus();
+            break;
           }
         }
       }
 
-      // (Add other types if needed)
+      function checkComplete() {
+        const allCorrect = inputs.every(inp => !inp || inp.disabled || inp.classList.contains('correct'));
+        if (allCorrect) {
+          setTimeout(() => {
+            alert("Correct! Next question coming soon...");
+          }, 500);
+        }
+      }
     }
 
-    renderQuestion();
+    // Example setup for digit-to-name question
+    const questionNumber = 1234;
+    const wordForm = numberToWords(questionNumber);
+    renderDigitToName(String(questionNumber), wordForm);
   </script>
 </body>
 </html>
