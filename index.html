@@ -71,6 +71,12 @@
       border-radius: 8px;
       border: 2px solid #888;
     }
+    .radio-group {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
     .celebration {
       font-size: 32px;
       animation: pop 0.5s ease-in-out infinite alternate;
@@ -84,7 +90,7 @@
 </head>
 <body>
   <div class="container">
-    <h1 id="question-title">Question 1 of 100</h1>
+    <h1 id="question-title">Question 1 of 20</h1>
     <div id="question-label"></div>
     <div id="question-content"></div>
     <div id="answer-container" class="answer-box"></div>
@@ -125,7 +131,7 @@
     const keys = Object.keys(numberWordMap).map(k => parseInt(k));
     const questions = [];
 
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 20; i++) {
       const type = ["name-to-digit", "digit-to-name", "comparison", "sequence", "largest", "smallest"][(Math.random() * 6) | 0];
 
       if (type === "name-to-digit") {
@@ -160,7 +166,7 @@
         const entries = labels.map((l, i) => [l, sample[i]]);
         const ans = entries.reduce((acc, cur) =>
           type === 'largest' ? (cur[1] > acc[1] ? cur : acc) : (cur[1] < acc[1] ? cur : acc))[0];
-        questions.push({ type, question: entries.map(([l, v]) => `${l} = ${v}`).join(', '), answer: ans });
+        questions.push({ type, entries, question: entries.map(([l, v]) => `${l} = ${v}`).join(', '), answer: ans });
       }
     }
 
@@ -199,6 +205,32 @@
       });
       inputs[0].focus();
 
+    } else if (q.type === 'comparison') {
+      ['>', '<', '='].forEach(symbol => {
+        const label = document.createElement('label');
+        const radio = document.createElement('input');
+        radio.type = 'radio';
+        radio.name = 'comp';
+        radio.value = symbol;
+        radio.onclick = () => checkRadioAnswer(radio.value);
+        label.appendChild(radio);
+        label.append(` ${symbol} `);
+        container.appendChild(label);
+      });
+
+    } else if (q.type === 'largest' || q.type === 'smallest') {
+      q.entries.forEach(([label, value]) => {
+        const line = document.createElement('div');
+        const radio = document.createElement('input');
+        radio.type = 'radio';
+        radio.name = 'pick';
+        radio.value = label;
+        radio.onclick = () => checkRadioAnswer(radio.value);
+        line.appendChild(radio);
+        line.append(` ${label} = ${value}`);
+        container.appendChild(line);
+      });
+
     } else {
       const inp = document.createElement('input');
       inp.className = 'text-input';
@@ -236,6 +268,16 @@
       }
     });
     if (allCorrect) {
+      sound.play();
+      setTimeout(() => {
+        current++;
+        renderQuestion();
+      }, 500);
+    }
+  }
+
+  function checkRadioAnswer(value) {
+    if (value === questions[current].answer) {
       sound.play();
       setTimeout(() => {
         current++;
