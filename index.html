@@ -47,135 +47,71 @@
       justify-content: center;
       gap: 8px;
     }
-    .letter-input {
-      width: 32px;
-      height: 40px;
-      text-align: center;
-      font-size: 24px;
+    .choice-button {
+      font-size: 20px;
+      padding: 10px 20px;
+      border-radius: 10px;
       border: 2px solid #888;
-      border-radius: 6px;
-      background: #fff;
-      font-weight: bold;
+      background-color: #fff;
+      cursor: pointer;
+      transition: all 0.2s;
     }
-    .letter-input.correct {
+    .choice-button:hover {
+      background-color: #e0ffe0;
+    }
+    .choice-button.correct {
+      background-color: #a0f0a0;
       border-color: green;
-      background-color: #d4f8d4;
     }
-    .letter-input.wrong {
+    .choice-button.wrong {
+      background-color: #f0a0a0;
       border-color: red;
-      background-color: #ffd6d6;
-    }
-    .static-char {
-      font-size: 24px;
-      padding: 6px;
-      font-weight: bold;
     }
   </style>
 </head>
 <body>
   <div class="container">
     <h1 id="question-title">Question 1 of 1</h1>
-    <div id="question-label">DIGIT TO NAME</div>
-    <div id="question-content">1234</div>
+    <div id="question-label">LARGEST</div>
+    <div id="question-content"></div>
     <div id="answer-container" class="answer-box"></div>
   </div>
+
   <audio id="correct-sound" src="https://www.soundjay.com/buttons/sounds/button-10.mp3" preload="auto"></audio>
 
   <script>
-    function numberToWords(num) {
-      const a = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
-        "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen",
-        "seventeen", "eighteen", "nineteen"];
-      const b = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];
-      if (num < 20) return a[num];
-      if (num < 100) return b[Math.floor(num / 10)] + (num % 10 ? " " + a[num % 10] : "");
-      if (num < 1000) return a[Math.floor(num / 100)] + " hundred" + (num % 100 ? " " + numberToWords(num % 100) : "");
-      if (num < 10000) return a[Math.floor(num / 1000)] + " thousand" + (num % 1000 ? " " + numberToWords(num % 1000) : "");
-    }
+    const question = {
+      type: 'largest',
+      entries: [
+        ['a', 3727],
+        ['b', 3851],
+        ['c', 3723],
+        ['d', 6227]
+      ],
+      question: 'a = 3727, b = 3851, c = 3723, d = 6227',
+      answer: 'd'
+    };
 
-    function hideHalfLetters(word) {
-      const chars = word.split('');
-      const indices = chars.map((c, i) => /[a-zA-Z]/.test(c) ? i : -1).filter(i => i >= 0);
-      const toHide = indices.sort(() => 0.5 - Math.random()).slice(0, Math.floor(indices.length / 2));
-      const masked = chars.map((c, i) => toHide.includes(i) ? '_' : c).join('');
-      return { masked };
-    }
+    document.getElementById('question-content').textContent = question.question;
 
-    function renderDigitToName(question, answer) {
-      const container = document.getElementById('answer-container');
-      container.innerHTML = '';
-      const { masked } = hideHalfLetters(answer);
-      const expected = answer.split('');
-      const inputs = [];
+    const container = document.getElementById('answer-container');
 
-      masked.split('').forEach((char, i) => {
-        if (char === ' ') {
-          const span = document.createElement('span');
-          span.className = 'static-char';
-          span.innerHTML = '&nbsp;';
-          container.appendChild(span);
-          inputs.push(null);
-        } else if (char === '_') {
-          const input = document.createElement('input');
-          input.className = 'letter-input';
-          input.maxLength = 1;
-          input.dataset.index = i;
-          input.dataset.expected = expected[i];
-
-          input.addEventListener('input', () => {
-            const val = input.value.toLowerCase();
-            const exp = input.dataset.expected.toLowerCase();
-            if (val === exp) {
-              input.classList.remove('wrong');
-              input.classList.add('correct');
-              document.getElementById('correct-sound').play();
-              focusNext(inputs, i);
-              checkComplete();
-            } else {
-              input.classList.remove('correct');
-              input.classList.add('wrong');
-              input.select();
-            }
-          });
-
-          inputs.push(input);
-          container.appendChild(input);
+    question.entries.forEach(([label, value]) => {
+      const btn = document.createElement('button');
+      btn.className = 'choice-button';
+      btn.textContent = label.toUpperCase();
+      btn.onclick = () => {
+        if (label === question.answer) {
+          btn.classList.add('correct');
+          document.getElementById('correct-sound').play();
+          setTimeout(() => alert('Correct!'), 300);
         } else {
-          const input = document.createElement('input');
-          input.className = 'letter-input';
-          input.value = char;
-          input.disabled = true;
-          inputs.push(null);
-          container.appendChild(input);
+          btn.classList.add('wrong');
+          setTimeout(() => btn.classList.remove('wrong'), 500);
         }
-      });
-
-      const first = inputs.find(i => i && !i.disabled);
-      if (first) first.focus();
-
-      function focusNext(list, fromIndex) {
-        for (let j = fromIndex + 1; j < list.length; j++) {
-          if (list[j] && !list[j].disabled) {
-            list[j].focus();
-            break;
-          }
-        }
-      }
-
-      function checkComplete() {
-        const allCorrect = inputs.every(inp => !inp || inp.disabled || inp.classList.contains('correct'));
-        if (allCorrect) {
-          setTimeout(() => {
-            alert("Correct! Next question coming soon...");
-          }, 500);
-        }
-      }
-    }
-
-    // Example setup for digit-to-name question
-    const questionNumber = 1234;
-    const wordForm = numberToWords(questionNumber);
-    renderDigitToName(String(questionNumber), wordForm);
+      };
+      container.appendChild(btn);
+    });
   </script>
 </body>
 </html>
