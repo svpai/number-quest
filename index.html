@@ -71,8 +71,8 @@
 </head>
 <body>
   <div class="container">
-    <h1 id="question-title">Question 1 of 1</h1>
-    <div id="question-label">LARGEST</div>
+    <h1 id="question-title">Question</h1>
+    <div id="question-label"></div>
     <div id="question-content"></div>
     <div id="answer-container" class="answer-box"></div>
   </div>
@@ -80,46 +80,119 @@
   <audio id="correct-sound" src="https://www.soundjay.com/buttons/sounds/button-10.mp3" preload="auto"></audio>
 
   <script>
-    const question = {
-      type: 'largest',
-      entries: [
-        ['a', 3727],
-        ['b', 3851],
-        ['c', 3723],
-        ['d', 6227]
-      ],
-      question: 'a = 3727, b = 3851, c = 3723, d = 6227',
-      answer: 'd'
-    };
-
-    document.getElementById('question-content').textContent = question.question;
-
+    const questionTitle = document.getElementById('question-title');
+    const questionLabel = document.getElementById('question-label');
+    const questionContent = document.getElementById('question-content');
     const container = document.getElementById('answer-container');
+    const correctSound = document.getElementById('correct-sound');
 
-    function goToNextQuestion() {
-      // You can replace this with logic to go to the next question
-      document.getElementById('question-title').textContent = 'Next Question...';
-      document.getElementById('question-label').textContent = '';
-      document.getElementById('question-content').textContent = '';
-      container.innerHTML = '<p>Loading next question...</p>';
+    function numberToWords(num) {
+      const a = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+        "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen",
+        "seventeen", "eighteen", "nineteen"];
+      const b = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];
+      if (num < 20) return a[num];
+      if (num < 100) return b[Math.floor(num / 10)] + (num % 10 ? " " + a[num % 10] : "");
+      if (num < 1000) return a[Math.floor(num / 100)] + " hundred" + (num % 100 ? " " + numberToWords(num % 100) : "");
+      if (num < 10000) return a[Math.floor(num / 1000)] + " thousand" + (num % 1000 ? " " + numberToWords(num % 1000) : "");
     }
 
-    question.entries.forEach(([label, value]) => {
-      const btn = document.createElement('button');
-      btn.className = 'choice-button';
-      btn.textContent = label.toUpperCase();
-      btn.onclick = () => {
-        if (label === question.answer) {
-          btn.classList.add('correct');
-          document.getElementById('correct-sound').play();
-          setTimeout(goToNextQuestion, 500);
-        } else {
-          btn.classList.add('wrong');
-          setTimeout(() => btn.classList.remove('wrong'), 500);
-        }
-      };
-      container.appendChild(btn);
-    });
+    function generateRandomQuestion() {
+      const type = ["largest", "smallest", "comparison", "name-to-digit"][Math.floor(Math.random() * 4)];
+      if (type === "largest" || type === "smallest") {
+        const values = Array.from({ length: 4 }, () => 1000 + Math.floor(Math.random() * 9000));
+        const labels = ['a', 'b', 'c', 'd'];
+        const entries = labels.map((l, i) => [l, values[i]]);
+        const chosen = entries.reduce((a, b) => type === "largest" ? (a[1] > b[1] ? a : b) : (a[1] < b[1] ? a : b))[0];
+        const questionText = entries.map(([l, v]) => `${l} = ${v}`).join(', ');
+        return {
+          type,
+          entries,
+          question: questionText,
+          answer: chosen
+        };
+      } else if (type === "comparison") {
+        const a = 1000 + Math.floor(Math.random() * 9000);
+        const b = 1000 + Math.floor(Math.random() * 9000);
+        const operator = a > b ? '>' : a < b ? '<' : '=';
+        return {
+          type: "comparison",
+          question: `${a} ? ${b}`,
+          answer: operator
+        };
+      } else if (type === "name-to-digit") {
+        const num = 1000 + Math.floor(Math.random() * 9000);
+        return {
+          type: "name-to-digit",
+          question: numberToWords(num),
+          answer: num.toString()
+        };
+      }
+    }
+
+    function renderQuestion() {
+      const q = generateRandomQuestion();
+      questionLabel.textContent = q.type.toUpperCase();
+      questionContent.textContent = q.question;
+      container.innerHTML = '';
+
+      if (q.type === "largest" || q.type === "smallest") {
+        q.entries.forEach(([label]) => {
+          const btn = document.createElement('button');
+          btn.className = 'choice-button';
+          btn.textContent = label.toUpperCase();
+          btn.onclick = () => {
+            if (label === q.answer) {
+              btn.classList.add('correct');
+              correctSound.play();
+              setTimeout(renderQuestion, 300);
+            } else {
+              btn.classList.add('wrong');
+              setTimeout(() => btn.classList.remove('wrong'), 500);
+            }
+          };
+          container.appendChild(btn);
+        });
+      } else if (q.type === "comparison") {
+        ['<', '=', '>'].forEach(symbol => {
+          const btn = document.createElement('button');
+          btn.className = 'choice-button';
+          btn.textContent = symbol;
+          btn.onclick = () => {
+            if (symbol === q.answer) {
+              btn.classList.add('correct');
+              correctSound.play();
+              setTimeout(renderQuestion, 300);
+            } else {
+              btn.classList.add('wrong');
+              setTimeout(() => btn.classList.remove('wrong'), 500);
+            }
+          };
+          container.appendChild(btn);
+        });
+      } else if (q.type === "name-to-digit") {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.placeholder = 'Enter number';
+        input.className = 'choice-button';
+        input.addEventListener('keydown', e => {
+          if (e.key === 'Enter') {
+            if (input.value.trim() === q.answer) {
+              input.classList.add('correct');
+              correctSound.play();
+              setTimeout(renderQuestion, 300);
+            } else {
+              input.classList.add('wrong');
+              setTimeout(() => input.classList.remove('wrong'), 500);
+            }
+          }
+        });
+        container.appendChild(input);
+        input.focus();
+      }
+    }
+
+    renderQuestion();
   </script>
 </body>
 </html>
