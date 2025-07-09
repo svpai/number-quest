@@ -46,6 +46,7 @@
       flex-wrap: wrap;
       justify-content: center;
       gap: 8px;
+      flex-direction: row;
     }
     .letter-input {
       width: 32px;
@@ -82,6 +83,11 @@
       border-color: red;
       background-color: #ffd6d6;
     }
+    .static-char {
+      font-size: 24px;
+      padding: 6px;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -96,21 +102,21 @@
 
   <script>
     function numberToWords(num) {
-      const a = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"];
+      const a = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+                 "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen",
+                 "seventeen", "eighteen", "nineteen"];
       const b = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];
 
       if (num < 20) return a[num];
-      if (num < 100) return b[Math.floor(num / 10)] + (num % 10 !== 0 ? " " + a[num % 10] : "");
-      if (num < 1000)
-        return a[Math.floor(num / 100)] + " hundred" + (num % 100 !== 0 ? " " + numberToWords(num % 100) : "");
-      if (num < 10000)
-        return a[Math.floor(num / 1000)] + " thousand" + (num % 1000 !== 0 ? " " + numberToWords(num % 1000) : "");
+      if (num < 100) return b[Math.floor(num / 10)] + (num % 10 ? " " + a[num % 10] : "");
+      if (num < 1000) return a[Math.floor(num / 100)] + " hundred" + (num % 100 ? " " + numberToWords(num % 100) : "");
+      if (num < 10000) return a[Math.floor(num / 1000)] + " thousand" + (num % 1000 ? " " + numberToWords(num % 1000) : "");
     }
 
     function hideHalfLetters(word) {
       const chars = word.split('');
       const indices = chars.map((c, i) => /[a-zA-Z]/.test(c) ? i : -1).filter(i => i >= 0);
-      const toHide = indices.sort(() => 0.5 - Math.random()).slice(0, indices.length / 2);
+      const toHide = indices.sort(() => 0.5 - Math.random()).slice(0, Math.floor(indices.length / 2));
       const masked = chars.map((c, i) => toHide.includes(i) ? '_' : c).join('');
       return { masked, missing: toHide.map(i => chars[i]) };
     }
@@ -127,8 +133,8 @@
         } else if (type === "digit-to-name") {
           const num = 1000 + Math.floor(Math.random() * 9000);
           const word = numberToWords(num);
-          const { masked, missing } = hideHalfLetters(word);
-          questions.push({ type, question: String(num), masked, answer: word, missing });
+          const { masked } = hideHalfLetters(word);
+          questions.push({ type, question: String(num), masked, answer: word });
 
         } else if (type === "comparison") {
           const left = `${1000 + Math.floor(Math.random() * 9000)} ${Math.random() < 0.5 ? '+' : '-'} ${1 + Math.floor(Math.random() * 20)}`;
@@ -158,55 +164,13 @@
       return questions;
     }
 
-    function renderSequenceInputs(expectedValues) {
+    function renderQuestion() {
       const container = document.getElementById('answer-container');
       container.innerHTML = '';
-      const inputs = [];
-      expectedValues.forEach((val, i) => {
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.className = 'text-input';
-        input.dataset.index = i;
-        input.dataset.expected = val;
-        input.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-            const currentVal = input.value.trim();
-            if (currentVal === input.dataset.expected) {
-              input.classList.remove('wrong');
-              input.classList.add('correct');
-              const nextInput = inputs[i + 1];
-              if (nextInput) {
-                nextInput.focus();
-              } else {
-                document.getElementById('correct-sound').play();
-                setTimeout(() => {
-                  current++;
-                  renderQuestion();
-                }, 500);
-              }
-            } else {
-              input.classList.remove('correct');
-              input.classList.add('wrong');
-              input.select();
-            }
-          }
-        });
-        inputs.push(input);
-        container.appendChild(input);
-      });
-      if (inputs.length) inputs[0].focus();
-    }
-
-    const questions = generateQuestions();
-    let current = 0;
-    const sound = document.getElementById('correct-sound');
-
-    function renderQuestion() {
       if (current >= questions.length) {
         document.getElementById('question-title').textContent = "Game Over!";
         document.getElementById('question-label').textContent = "";
         document.getElementById('question-content').textContent = "You finished all the questions!";
-        document.getElementById('answer-container').innerHTML = "";
         return;
       }
 
@@ -214,10 +178,67 @@
       document.getElementById('question-title').textContent = `Question ${current + 1} of ${questions.length}`;
       document.getElementById('question-label').textContent = q.type.replace(/-/g, ' ').toUpperCase();
       document.getElementById('question-content').textContent = q.question;
-      const container = document.getElementById('answer-container');
-      container.innerHTML = '';
 
-      if (q.type === "name-to-digit") {
+      if (q.type === "digit-to-name") {
+        const inputs = [];
+        const chars = q.masked.split('');
+        const expectedChars = q.answer.split('');
+        chars.forEach((char, i) => {
+          if (char === '_') {
+            const input = document.createElement('input');
+            input.maxLength = 1;
+            input.className = 'letter-input';
+            input.dataset.expected = expectedChars[i];
+            input.addEventListener('input', () => {
+              const val = input.value.toLowerCase();
+              const expected = input.dataset.expected.toLowerCase();
+              if (val === expected) {
+                input.classList.add('correct');
+                input.classList.remove('wrong');
+                document.getElementById('correct-sound').play();
+
+                // Move to next editable input
+                const idx = inputs.indexOf(input);
+                for (let j = idx + 1; j < inputs.length; j++) {
+                  if (!inputs[j].disabled) {
+                    inputs[j].focus();
+                    break;
+                  }
+                }
+
+                if (inputs.every(inp => inp.disabled || inp.classList.contains('correct'))) {
+                  setTimeout(() => {
+                    current++;
+                    renderQuestion();
+                  }, 500);
+                }
+              } else {
+                input.classList.add('wrong');
+                input.classList.remove('correct');
+                input.select();
+              }
+            });
+            inputs.push(input);
+            container.appendChild(input);
+          } else if (char === ' ') {
+            const span = document.createElement('span');
+            span.className = 'static-char';
+            span.innerHTML = '&nbsp;';
+            inputs.push({ disabled: true }); // placeholder for spacing
+            container.appendChild(span);
+          } else {
+            const input = document.createElement('input');
+            input.value = char;
+            input.disabled = true;
+            input.className = 'letter-input';
+            inputs.push(input);
+            container.appendChild(input);
+          }
+        });
+        const first = inputs.find(i => i instanceof HTMLInputElement && !i.disabled);
+        if (first) first.focus();
+
+      } else if (q.type === "name-to-digit") {
         const input = document.createElement('input');
         input.type = 'text';
         input.className = 'text-input';
@@ -225,7 +246,7 @@
           if (e.key === 'Enter') {
             if (input.value.trim() === q.answer) {
               input.classList.add('correct');
-              sound.play();
+              document.getElementById('correct-sound').play();
               setTimeout(() => { current++; renderQuestion(); }, 500);
             } else {
               input.classList.add('wrong');
@@ -236,90 +257,68 @@
         container.appendChild(input);
         input.focus();
 
-      } else if (q.type === "digit-to-name") {
-        const inputs = [];
-        q.masked.split('').forEach((char, i) => {
-          const input = document.createElement('input');
-          input.maxLength = 1;
-          input.className = 'letter-input';
-          if (char === '_') {
-            input.dataset.expected = q.answer[i];
-            input.addEventListener('input', (e) => {
-              const val = e.target.value.toLowerCase();
-              const expected = input.dataset.expected.toLowerCase();
-              if (val === expected) {
-                input.classList.add('correct');
-                input.classList.remove('wrong');
-                sound.play();
-                const next = inputs[inputs.indexOf(input) + 1];
-                if (next) {
-                  next.focus();
-                } else {
-                  const allCorrect = inputs.every(inp => inp.classList.contains('correct'));
-                  if (allCorrect) {
-                    setTimeout(() => {
-                      current++;
-                      renderQuestion();
-                    }, 500);
-                  }
-                }
-              } else {
-                input.classList.remove('correct');
-                input.classList.add('wrong');
-                input.select();
-              }
-            });
-          } else {
-            input.value = char;
-            input.disabled = true;
-          }
-          inputs.push(input);
-          container.appendChild(input);
-        });
-
-        const firstEditable = inputs.find(i => !i.disabled);
-        if (firstEditable) firstEditable.focus();
-
       } else if (q.type === "comparison") {
-        const options = ['>', '<', '='];
-        options.forEach(op => {
+        ['>', '<', '='].forEach(op => {
           const btn = document.createElement('button');
           btn.textContent = op;
+          btn.className = 'text-input';
           btn.onclick = () => {
             if (op === q.answer) {
-              sound.play();
               btn.classList.add('correct');
+              document.getElementById('correct-sound').play();
               setTimeout(() => { current++; renderQuestion(); }, 500);
             } else {
               btn.classList.add('wrong');
             }
           };
-          btn.className = 'text-input';
           container.appendChild(btn);
         });
 
       } else if (q.type === "sequence") {
-        renderSequenceInputs(q.answer);
+        q.answer.forEach((ans, i) => {
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.className = 'text-input';
+          input.dataset.expected = ans;
+          input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+              if (input.value.trim() === input.dataset.expected) {
+                input.classList.add('correct');
+                document.getElementById('correct-sound').play();
+                const next = container.querySelectorAll('.text-input')[i + 1];
+                if (next) next.focus();
+                else setTimeout(() => { current++; renderQuestion(); }, 500);
+              } else {
+                input.classList.add('wrong');
+                input.select();
+              }
+            }
+          });
+          container.appendChild(input);
+        });
+        container.querySelector('.text-input').focus();
 
       } else if (q.type === "largest" || q.type === "smallest") {
-        q.entries.forEach(([label, value]) => {
+        q.entries.forEach(([label, val]) => {
           const btn = document.createElement('button');
-          btn.textContent = `${label} = ${value}`;
+          btn.textContent = `${label} = ${val}`;
+          btn.className = 'text-input';
           btn.onclick = () => {
             if (label === q.answer) {
-              sound.play();
               btn.classList.add('correct');
+              document.getElementById('correct-sound').play();
               setTimeout(() => { current++; renderQuestion(); }, 500);
             } else {
               btn.classList.add('wrong');
             }
           };
-          btn.className = 'text-input';
           container.appendChild(btn);
         });
       }
     }
 
+    const questions = generateQuestions();
+    let current = 0;
     renderQuestion();
   </script>
 </body>
