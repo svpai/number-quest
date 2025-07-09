@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Jungle Math Quest</title>
+  <style>
+    body {
+      margin: 0; padding: 0;
+      font-family: 'Comic Sans MS', cursive, sans-serif;
+      background: url('assets/jungle.jpg');
+      background-size: cover;
+      background-position: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      text-align: center;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.4);
+      padding: 20px;
+      border-radius: 20px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.3);
+      max-width: 90%;
+    }
+    h1 {
+      font-size: 24px;
+      color: #2e8b57;
+      margin-bottom: 10px;
+    }
+    #question-label {
+      font-weight: bold;
+      color: #4a7023;
+      margin-bottom: 5px;
+      font-size: 20px;
+    }
+    #question-content {
+      font-size: 20px;
+      color: #3b3b3b;
+      margin-bottom: 15px;
+    }
+    .answer-box {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+    }
+    .letter-input {
+      width: 32px;
+      height: 40px;
+      text-align: center;
+      font-size: 24px;
+      border: 2px solid #888;
+      border-radius: 6px;
+      background: #fff;
+      font-weight: bold;
+    }
+    .letter-input.correct {
+      border-color: green;
+      background-color: #d4f8d4;
+    }
+    .letter-input.wrong {
+      border-color: red;
+      background-color: #ffd6d6;
+    }
+    .text-input {
+      font-size: 24px;
+      padding: 4px 8px;
+      border-radius: 8px;
+      border: 2px solid #888;
+    }
+    .celebration {
+      font-size: 32px;
+      animation: pop 0.5s ease-in-out infinite alternate;
+      color: #ff4500;
+    }
+    @keyframes pop {
+      from { transform: scale(1); }
+      to { transform: scale(1.1); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 id="question-title">Question 1 of 100</h1>
+    <div id="question-label"></div>
+    <div id="question-content"></div>
+    <div id="answer-container" class="answer-box"></div>
+  </div>
+
+<audio id="correct-sound" src="https://www.soundjay.com/buttons/sounds/button-10.mp3" preload="auto"></audio>
+
+<script>
+  const numberWordMap = {
+    1000: "One thousand",
+    1001: "One thousand one",
+    1020: "One thousand twenty",
+    1100: "One thousand one hundred",
+    1234: "One thousand two hundred thirty four",
+    1500: "One thousand five hundred",
+    1999: "One thousand nine hundred ninety nine",
+    2024: "Two thousand twenty four",
+    3001: "Three thousand one",
+    4321: "Four thousand three hundred twenty one",
+    5555: "Five thousand five hundred fifty five",
+    6789: "Six thousand seven hundred eighty nine",
+    7890: "Seven thousand eight hundred ninety",
+    8008: "Eight thousand eight",
+    9000: "Nine thousand",
+    9999: "Nine thousand nine hundred ninety nine"
+  };
+
+  function hideHalfLetters(word) {
+    const chars = word.split('');
+    const indices = chars.map((c, i) => /[a-zA-Z]/.test(c) ? i : -1).filter(i => i >= 0);
+    const toHide = indices.sort(() => 0.5 - Math.random()).slice(0, indices.length / 2);
+    const masked = chars.map((c, i) => toHide.includes(i) ? '_' : c).join('');
+    const missing = toHide.map(i => chars[i]);
+    return { masked, missing };
+  }
+
+  function generateQuestions() {
+    const keys = Object.keys(numberWordMap).map(k => parseInt(k));
+    const questions = [];
+
+    for (let i = 0; i < 100; i++) {
+      const type = ["name-to-digit", "digit-to-name", "comparison", "sequence", "largest", "smallest"][(Math.random() * 6) | 0];
+
+      if (type === "name-to-digit") {
+        const num = keys[Math.random() * keys.length | 0];
+        questions.push({ type, question: numberWordMap[num], answer: String(num) });
+
+      } else if (type === "digit-to-name") {
+        const num = keys[Math.random() * keys.length | 0];
+        const word = numberWordMap[num];
+        const { masked, missing } = hideHalfLetters(word);
+        questions.push({ type, question: String(num), masked, answer: word, missing });
+
+      } else if (type === "comparison") {
+        const left = `${1000 + Math.random()*9000|0} ${Math.random()<0.5?'+':'-'} ${1 + Math.random()*20|0}`;
+        const right = `${1000 + Math.random()*9000|0} ${Math.random()<0.5?'+':'-'} ${1 + Math.random()*20|0}`;
+        const l = eval(left), r = eval(right);
+        const ans = l > r ? '>' : l < r ? '<' : '=';
+        questions.push({ type, question: `${left} ? ${right}`, answer: ans });
+
+      } else if (type === "sequence") {
+        const base = 1000 + Math.random()*8000 | 0;
+        const front = Math.random() < 0.5;
+        questions.push({
+          type,
+          question: front ? `_, ${base+1}, ${base+2}` : `${base}, _, _`,
+          answer: front ? `${base}` : `${base+1}, ${base+2}`
+        });
+
+      } else if (type === "largest" || type === "smallest") {
+        const sample = keys.sort(() => 0.5 - Math.random()).slice(0, 4);
+        const labels = ['a', 'b', 'c', 'd'];
+        const entries = labels.map((l, i) => [l, sample[i]]);
+        const ans = entries.reduce((acc, cur) =>
+          type === 'largest' ? (cur[1] > acc[1] ? cur : acc) : (cur[1] < acc[1] ? cur : acc))[0];
+        questions.push({ type, question: entries.map(([l, v]) => `${l} = ${v}`).join(', '), answer: ans });
+      }
+    }
+
+    return questions;
+  }
+
+  const questions = generateQuestions();
+  let current = 0;
+  const sound = document.getElementById('correct-sound');
+
+  function renderQuestion() {
+    if (current >= questions.length) {
+      document.body.innerHTML = `<div class="container"><div class="celebration">🎉 You did it! Great Job! 🎉</div></div>`;
+      return;
+    }
+
+    const q = questions[current];
+    document.getElementById('question-title').textContent = `Question ${current + 1} of ${questions.length}`;
+    document.getElementById('question-label').textContent = q.type.replace(/-/g, ' ').toUpperCase();
+    document.getElementById('question-content').textContent = q.type === 'digit-to-name' ? q.masked : q.question;
+
+    const container = document.getElementById('answer-container');
+    container.innerHTML = '';
+
+    if (q.type === 'digit-to-name') {
+      const inputs = [];
+      q.missing.forEach((_, i) => {
+        const inp = document.createElement('input');
+        inp.className = 'letter-input';
+        inp.maxLength = 1;
+        inp.dataset.index = i;
+        inp.dataset.expected = q.missing[i].toLowerCase();
+        inp.addEventListener('input', () => validateInputs(inputs, q));
+        inputs.push(inp);
+        container.appendChild(inp);
+      });
+      inputs[0].focus();
+
+    } else {
+      const inp = document.createElement('input');
+      inp.className = 'text-input';
+      container.appendChild(inp);
+      inp.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+          if (inp.value.trim().toLowerCase() === q.answer.toLowerCase()) {
+            sound.play();
+            setTimeout(() => {
+              current++;
+              renderQuestion();
+            }, 500);
+          } else {
+            inp.classList.add('wrong');
+            inp.select();
+          }
+        }
+      });
+      inp.focus();
+    }
+  }
+
+  function validateInputs(inputs, q) {
+    let allCorrect = true;
+    inputs.forEach(inp => {
+      const expected = inp.dataset.expected;
+      const given = inp.value.toLowerCase();
+      if (given === expected) {
+        inp.classList.remove('wrong');
+        inp.classList.add('correct');
+      } else {
+        inp.classList.remove('correct');
+        inp.classList.add('wrong');
+        allCorrect = false;
+      }
+    });
+    if (allCorrect) {
+      sound.play();
+      setTimeout(() => {
+        current++;
+        renderQuestion();
+      }, 500);
+    }
+  }
+
+  renderQuestion();
+</script>
+</body>
+</html>
