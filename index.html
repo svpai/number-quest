@@ -85,6 +85,24 @@
       border-color: red;
       background-color: #ffd6d6;
     }
+    .final-message {
+      font-size: 30px;
+      color: #ff1493;
+      font-weight: bold;
+      margin-top: 20px;
+    }
+    .firework {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background: red;
+      border-radius: 50%;
+      animation: explode 1s ease-out forwards;
+    }
+    @keyframes explode {
+      0% { transform: scale(1); opacity: 1; }
+      100% { transform: scale(5); opacity: 0; }
+    }
   </style>
 </head>
 <body>
@@ -93,15 +111,15 @@
     <div id="question-label"></div>
     <div id="question-content"></div>
     <div id="answer-container" class="answer-box"></div>
+    <div id="final-message" class="final-message"></div>
   </div>
-
   <audio id="correct-sound" src="https://www.soundjay.com/buttons/sounds/button-10.mp3" preload="auto"></audio>
-
   <script>
     const questionTitle = document.getElementById('question-title');
     const questionLabel = document.getElementById('question-label');
     const questionContent = document.getElementById('question-content');
     const container = document.getElementById('answer-container');
+    const finalMessage = document.getElementById('final-message');
     const correctSound = document.getElementById('correct-sound');
 
     function numberToWords(num) {
@@ -115,12 +133,15 @@
       if (num < 10000) return a[Math.floor(num / 1000)] + " thousand" + (num % 1000 ? " " + numberToWords(num % 1000) : "");
     }
 
-    function hideHalfLetters(word) {
-      const chars = word.split('');
-      const indices = chars.map((c, i) => /[a-zA-Z]/.test(c) ? i : -1).filter(i => i >= 0);
-      const toHide = indices.sort(() => 0.5 - Math.random()).slice(0, Math.floor(indices.length / 2));
-      const masked = chars.map((c, i) => toHide.includes(i) ? '_' : c).join('');
-      return { masked, answer: chars };
+    function showFireworks() {
+      for (let i = 0; i < 10; i++) {
+        const f = document.createElement('div');
+        f.className = 'firework';
+        f.style.left = Math.random() * window.innerWidth + 'px';
+        f.style.top = Math.random() * window.innerHeight + 'px';
+        document.body.appendChild(f);
+        setTimeout(() => f.remove(), 1000);
+      }
     }
 
     function generateAllQuestions(count = 20) {
@@ -128,6 +149,7 @@
       const types = ["largest", "smallest", "comparison", "name-to-digit", "digit-to-name"];
       for (let i = 0; i < count; i++) {
         const type = types[Math.floor(Math.random() * types.length)];
+        const num = 1000 + Math.floor(Math.random() * 9000);
         if (type === "largest" || type === "smallest") {
           const values = Array.from({ length: 4 }, () => 1000 + Math.floor(Math.random() * 9000));
           const labels = ['a', 'b', 'c', 'd'];
@@ -140,13 +162,15 @@
           const operator = a > b ? '>' : a < b ? '<' : '=';
           questions.push({ type, question: `${a} ? ${b}`, answer: operator });
         } else if (type === "name-to-digit") {
-          const num = 1000 + Math.floor(Math.random() * 9000);
-          questions.push({ type, question: numberToWords(num), answer: num.toString() });
+          const digits = ("" + num).split("");
+          questions.push({ type, digits, answer: num.toString() });
         } else if (type === "digit-to-name") {
-          const num = 1000 + Math.floor(Math.random() * 9000);
           const word = numberToWords(num);
-          const { masked, answer } = hideHalfLetters(word);
-          questions.push({ type, question: num.toString(), masked, answer });
+          const chars = word.split('');
+          const indices = chars.map((c, i) => /[a-zA-Z]/.test(c) ? i : -1).filter(i => i >= 0);
+          const toHide = indices.sort(() => 0.5 - Math.random()).slice(0, Math.floor(indices.length / 2));
+          const masked = chars.map((c, i) => toHide.includes(i) ? '_' : c);
+          questions.push({ type, question: num.toString(), masked, answer: chars });
         }
       }
       return questions;
@@ -159,8 +183,9 @@
       const q = questions[current];
       questionTitle.textContent = `Question ${current + 1}/20`;
       questionLabel.textContent = q.type.toUpperCase();
-      questionContent.textContent = q.type === 'digit-to-name' ? q.question : q.question;
+      questionContent.textContent = q.question || '';
       container.innerHTML = '';
+      finalMessage.textContent = '';
 
       if (q.type === "largest" || q.type === "smallest") {
         q.entries.forEach(([label]) => {
@@ -195,40 +220,45 @@
           container.appendChild(btn);
         });
       } else if (q.type === "name-to-digit") {
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.placeholder = 'Enter number';
-        input.className = 'choice-button';
-        input.addEventListener('keydown', e => {
-          if (e.key === 'Enter') {
-            if (input.value.trim() === q.answer) {
-              correctSound.play();
-              nextQuestion();
+        const inputs = [];
+        q.digits.forEach((digit, index) => {
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.maxLength = 1;
+          input.className = 'letter-input';
+          input.addEventListener('input', () => {
+            if (input.value === digit) {
+              input.classList.add('correct');
+              const next = inputs[index + 1];
+              if (next) next.focus();
+              else {
+                correctSound.play();
+                nextQuestion();
+              }
             } else {
               input.classList.add('wrong');
-              setTimeout(() => input.classList.remove('wrong'), 500);
+              input.select();
             }
-          }
+          });
+          container.appendChild(input);
+          inputs.push(input);
         });
-        container.appendChild(input);
-        input.focus();
+        if (inputs.length) inputs[0].focus();
       } else if (q.type === "digit-to-name") {
-        const word = q.answer;
         const inputs = [];
-        for (let i = 0; i < word.length; i++) {
-          const c = q.masked[i];
-          if (c === ' ') {
+        q.masked.forEach((char, i) => {
+          if (char === ' ') {
             const spacer = document.createElement('span');
             spacer.style.width = '10px';
             container.appendChild(spacer);
-          } else if (c === '_') {
+          } else if (char === '_') {
             const input = document.createElement('input');
             input.maxLength = 1;
             input.className = 'letter-input';
             input.dataset.index = i;
-            input.dataset.expected = word[i];
+            input.dataset.expected = q.answer[i];
             input.addEventListener('input', () => {
-              if (input.value.toLowerCase() === word[i].toLowerCase()) {
+              if (input.value.toLowerCase() === q.answer[i].toLowerCase()) {
                 input.classList.remove('wrong');
                 input.classList.add('correct');
                 const next = inputs[inputs.indexOf(input) + 1];
@@ -247,23 +277,26 @@
             inputs.push(input);
           } else {
             const span = document.createElement('span');
-            span.textContent = c.toUpperCase();
+            span.textContent = char.toUpperCase();
             span.className = 'letter-input correct';
             container.appendChild(span);
           }
-        }
+        });
         if (inputs.length) inputs[0].focus();
       }
     }
 
     function nextQuestion() {
       current++;
-      if (current < questions.length) renderQuestion();
-      else {
-        questionTitle.textContent = 'Well done!';
+      if (current < questions.length) {
+        renderQuestion();
+      } else {
+        questionTitle.textContent = '';
         questionLabel.textContent = '';
-        questionContent.textContent = 'You completed all questions!';
+        questionContent.textContent = '';
         container.innerHTML = '';
+        finalMessage.innerHTML = '🎉 Hooray! You finished all questions! 🎊<br/>You are a Jungle Math Champion!';
+        showFireworks();
       }
     }
 
