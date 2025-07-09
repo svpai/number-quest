@@ -67,11 +67,29 @@
       background-color: #f0a0a0;
       border-color: red;
     }
+    .letter-input {
+      width: 32px;
+      height: 40px;
+      text-align: center;
+      font-size: 24px;
+      border: 2px solid #888;
+      border-radius: 6px;
+      background: #fff;
+      font-weight: bold;
+    }
+    .letter-input.correct {
+      border-color: green;
+      background-color: #d4f8d4;
+    }
+    .letter-input.wrong {
+      border-color: red;
+      background-color: #ffd6d6;
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1 id="question-title">Question</h1>
+    <h1 id="question-title">Question 1/20</h1>
     <div id="question-label"></div>
     <div id="question-content"></div>
     <div id="answer-container" class="answer-box"></div>
@@ -97,43 +115,51 @@
       if (num < 10000) return a[Math.floor(num / 1000)] + " thousand" + (num % 1000 ? " " + numberToWords(num % 1000) : "");
     }
 
-    function generateRandomQuestion() {
-      const type = ["largest", "smallest", "comparison", "name-to-digit"][Math.floor(Math.random() * 4)];
-      if (type === "largest" || type === "smallest") {
-        const values = Array.from({ length: 4 }, () => 1000 + Math.floor(Math.random() * 9000));
-        const labels = ['a', 'b', 'c', 'd'];
-        const entries = labels.map((l, i) => [l, values[i]]);
-        const chosen = entries.reduce((a, b) => type === "largest" ? (a[1] > b[1] ? a : b) : (a[1] < b[1] ? a : b))[0];
-        const questionText = entries.map(([l, v]) => `${l} = ${v}`).join(', ');
-        return {
-          type,
-          entries,
-          question: questionText,
-          answer: chosen
-        };
-      } else if (type === "comparison") {
-        const a = 1000 + Math.floor(Math.random() * 9000);
-        const b = 1000 + Math.floor(Math.random() * 9000);
-        const operator = a > b ? '>' : a < b ? '<' : '=';
-        return {
-          type: "comparison",
-          question: `${a} ? ${b}`,
-          answer: operator
-        };
-      } else if (type === "name-to-digit") {
-        const num = 1000 + Math.floor(Math.random() * 9000);
-        return {
-          type: "name-to-digit",
-          question: numberToWords(num),
-          answer: num.toString()
-        };
-      }
+    function hideHalfLetters(word) {
+      const chars = word.split('');
+      const indices = chars.map((c, i) => /[a-zA-Z]/.test(c) ? i : -1).filter(i => i >= 0);
+      const toHide = indices.sort(() => 0.5 - Math.random()).slice(0, Math.floor(indices.length / 2));
+      const masked = chars.map((c, i) => toHide.includes(i) ? '_' : c).join('');
+      return { masked, answer: chars };
     }
 
+    function generateAllQuestions(count = 20) {
+      const questions = [];
+      const types = ["largest", "smallest", "comparison", "name-to-digit", "digit-to-name"];
+      for (let i = 0; i < count; i++) {
+        const type = types[Math.floor(Math.random() * types.length)];
+        if (type === "largest" || type === "smallest") {
+          const values = Array.from({ length: 4 }, () => 1000 + Math.floor(Math.random() * 9000));
+          const labels = ['a', 'b', 'c', 'd'];
+          const entries = labels.map((l, i) => [l, values[i]]);
+          const chosen = entries.reduce((a, b) => type === "largest" ? (a[1] > b[1] ? a : b) : (a[1] < b[1] ? a : b))[0];
+          questions.push({ type, entries, question: entries.map(([l, v]) => `${l} = ${v}`).join(', '), answer: chosen });
+        } else if (type === "comparison") {
+          const a = 1000 + Math.floor(Math.random() * 9000);
+          const b = 1000 + Math.floor(Math.random() * 9000);
+          const operator = a > b ? '>' : a < b ? '<' : '=';
+          questions.push({ type, question: `${a} ? ${b}`, answer: operator });
+        } else if (type === "name-to-digit") {
+          const num = 1000 + Math.floor(Math.random() * 9000);
+          questions.push({ type, question: numberToWords(num), answer: num.toString() });
+        } else if (type === "digit-to-name") {
+          const num = 1000 + Math.floor(Math.random() * 9000);
+          const word = numberToWords(num);
+          const { masked, answer } = hideHalfLetters(word);
+          questions.push({ type, question: num.toString(), masked, answer });
+        }
+      }
+      return questions;
+    }
+
+    const questions = generateAllQuestions();
+    let current = 0;
+
     function renderQuestion() {
-      const q = generateRandomQuestion();
+      const q = questions[current];
+      questionTitle.textContent = `Question ${current + 1}/20`;
       questionLabel.textContent = q.type.toUpperCase();
-      questionContent.textContent = q.question;
+      questionContent.textContent = q.type === 'digit-to-name' ? q.question : q.question;
       container.innerHTML = '';
 
       if (q.type === "largest" || q.type === "smallest") {
@@ -143,9 +169,8 @@
           btn.textContent = label.toUpperCase();
           btn.onclick = () => {
             if (label === q.answer) {
-              btn.classList.add('correct');
               correctSound.play();
-              setTimeout(renderQuestion, 300);
+              nextQuestion();
             } else {
               btn.classList.add('wrong');
               setTimeout(() => btn.classList.remove('wrong'), 500);
@@ -160,9 +185,8 @@
           btn.textContent = symbol;
           btn.onclick = () => {
             if (symbol === q.answer) {
-              btn.classList.add('correct');
               correctSound.play();
-              setTimeout(renderQuestion, 300);
+              nextQuestion();
             } else {
               btn.classList.add('wrong');
               setTimeout(() => btn.classList.remove('wrong'), 500);
@@ -178,9 +202,8 @@
         input.addEventListener('keydown', e => {
           if (e.key === 'Enter') {
             if (input.value.trim() === q.answer) {
-              input.classList.add('correct');
               correctSound.play();
-              setTimeout(renderQuestion, 300);
+              nextQuestion();
             } else {
               input.classList.add('wrong');
               setTimeout(() => input.classList.remove('wrong'), 500);
@@ -189,6 +212,58 @@
         });
         container.appendChild(input);
         input.focus();
+      } else if (q.type === "digit-to-name") {
+        const word = q.answer;
+        const inputs = [];
+        for (let i = 0; i < word.length; i++) {
+          const c = q.masked[i];
+          if (c === ' ') {
+            const spacer = document.createElement('span');
+            spacer.style.width = '10px';
+            container.appendChild(spacer);
+          } else if (c === '_') {
+            const input = document.createElement('input');
+            input.maxLength = 1;
+            input.className = 'letter-input';
+            input.dataset.index = i;
+            input.dataset.expected = word[i];
+            input.addEventListener('input', () => {
+              if (input.value.toLowerCase() === word[i].toLowerCase()) {
+                input.classList.remove('wrong');
+                input.classList.add('correct');
+                const next = inputs[inputs.indexOf(input) + 1];
+                if (next) next.focus();
+                else {
+                  correctSound.play();
+                  nextQuestion();
+                }
+              } else {
+                input.classList.remove('correct');
+                input.classList.add('wrong');
+                input.select();
+              }
+            });
+            container.appendChild(input);
+            inputs.push(input);
+          } else {
+            const span = document.createElement('span');
+            span.textContent = c.toUpperCase();
+            span.className = 'letter-input correct';
+            container.appendChild(span);
+          }
+        }
+        if (inputs.length) inputs[0].focus();
+      }
+    }
+
+    function nextQuestion() {
+      current++;
+      if (current < questions.length) renderQuestion();
+      else {
+        questionTitle.textContent = 'Well done!';
+        questionLabel.textContent = '';
+        questionContent.textContent = 'You completed all questions!';
+        container.innerHTML = '';
       }
     }
 
