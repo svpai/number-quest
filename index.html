@@ -124,6 +124,16 @@
       }
     }
 
+    function getRandomIndices(length, percent = 0.5) {
+      const count = Math.floor(length * percent);
+      const indices = Array.from({ length }, (_, i) => i);
+      for (let i = indices.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [indices[i], indices[j]] = [indices[j], indices[i]];
+      }
+      return indices.slice(0, count);
+    }
+
     function generateAllQuestions(count = 20) {
       const questions = [];
       const types = ["largest", "smallest", "comparison", "name-to-digit", "digit-to-name"];
@@ -149,7 +159,7 @@
           const word = numberToWords(num);
           const chars = word.split('');
           const letterIndices = chars.map((c, i) => /[a-zA-Z]/.test(c) ? i : -1).filter(i => i >= 0);
-          const toHide = letterIndices.filter((_, i) => i % 2 === 0);
+          const toHide = getRandomIndices(letterIndices.length, 0.5).map(i => letterIndices[i]);
           const masked = chars.map((c, i) => toHide.includes(i) ? '_' : c);
           questions.push({ type, question: num.toString(), masked, answer: chars });
         }
@@ -171,6 +181,9 @@
       if (q.type === "name-to-digit" || q.type === "digit-to-name") {
         const answerArray = q.type === "name-to-digit" ? q.digits : q.answer;
         const maskArray = q.type === "digit-to-name" ? q.masked : null;
+        let correctCount = 0;
+        let totalToType = 0;
+
         for (let i = 0; i < answerArray.length; i++) {
           const expectedChar = answerArray[i];
           const isVisible = maskArray ? maskArray[i] !== '_' : false;
@@ -192,15 +205,19 @@
             input.className = 'letter-input';
             input.dataset.index = i;
             input.dataset.expected = expectedChar;
+            totalToType++;
+
             input.addEventListener('input', () => {
               if (input.value.toLowerCase() === expectedChar.toLowerCase()) {
                 input.classList.add('correct');
                 input.classList.remove('wrong');
-                const next = container.querySelector(`input[data-index='${i + 1}']`);
-                if (next) next.focus();
-                else {
+                correctCount++;
+                if (correctCount === totalToType) {
                   correctSound.play();
                   setTimeout(nextQuestion, 300);
+                } else {
+                  const next = container.querySelector(`input:not(.correct)`);
+                  if (next) next.focus();
                 }
               } else {
                 input.classList.add('wrong');
