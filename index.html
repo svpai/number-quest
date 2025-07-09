@@ -47,26 +47,6 @@
       justify-content: center;
       gap: 8px;
     }
-    .choice-button {
-      font-size: 20px;
-      padding: 10px 20px;
-      border-radius: 10px;
-      border: 2px solid #888;
-      background-color: #fff;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .choice-button:hover {
-      background-color: #e0ffe0;
-    }
-    .choice-button.correct {
-      background-color: #a0f0a0;
-      border-color: green;
-    }
-    .choice-button.wrong {
-      background-color: #f0a0a0;
-      border-color: red;
-    }
     .letter-input {
       width: 32px;
       height: 40px;
@@ -169,7 +149,7 @@
           const word = numberToWords(num);
           const chars = word.split('');
           const letterIndices = chars.map((c, i) => /[a-zA-Z]/.test(c) ? i : -1).filter(i => i >= 0);
-          const toHide = letterIndices.filter((_, i) => i % 2 === 0); // alternate hiding
+          const toHide = letterIndices.filter((_, i) => i % 2 === 0);
           const masked = chars.map((c, i) => toHide.includes(i) ? '_' : c);
           questions.push({ type, question: num.toString(), masked, answer: chars });
         }
@@ -184,11 +164,73 @@
       const q = questions[current];
       questionTitle.textContent = `Question ${current + 1}/20`;
       questionLabel.textContent = q.type.toUpperCase();
-      questionContent.textContent = q.word || q.question || '';
+      questionContent.textContent = q.type === "name-to-digit" ? q.word : q.question;
       container.innerHTML = '';
       finalMessage.textContent = '';
 
-      // rest of render logic remains unchanged
+      if (q.type === "name-to-digit") {
+        q.digits.forEach((digit, index) => {
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.maxLength = 1;
+          input.className = 'letter-input';
+          input.dataset.index = index;
+          input.addEventListener('input', () => {
+            if (input.value === q.digits[index]) {
+              input.classList.add('correct');
+              input.classList.remove('wrong');
+              const next = container.querySelector(`input[data-index='${index + 1}']`);
+              if (next) next.focus();
+              else {
+                correctSound.play();
+                setTimeout(nextQuestion, 300);
+              }
+            } else {
+              input.classList.add('wrong');
+              input.classList.remove('correct');
+              input.select();
+            }
+          });
+          container.appendChild(input);
+        });
+        container.querySelector('input').focus();
+      } else if (q.type === "digit-to-name") {
+        q.masked.forEach((char, index) => {
+          if (char === '_') {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.maxLength = 1;
+            input.className = 'letter-input';
+            input.dataset.index = index;
+            input.dataset.expected = q.answer[index];
+            input.addEventListener('input', () => {
+              if (input.value.toLowerCase() === input.dataset.expected) {
+                input.classList.add('correct');
+                input.classList.remove('wrong');
+                const next = container.querySelector(`input[data-index='${+index + 1}']`);
+                if (next) next.focus();
+                else {
+                  correctSound.play();
+                  setTimeout(nextQuestion, 300);
+                }
+              } else {
+                input.classList.add('wrong');
+                input.classList.remove('correct');
+                input.select();
+              }
+            });
+            container.appendChild(input);
+          } else {
+            const span = document.createElement('span');
+            span.textContent = char;
+            span.style.fontSize = '24px';
+            span.style.padding = '6px';
+            container.appendChild(span);
+          }
+        });
+        const firstInput = container.querySelector('input');
+        if (firstInput) firstInput.focus();
+      }
     }
 
     function nextQuestion() {
