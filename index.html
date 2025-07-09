@@ -70,14 +70,18 @@
       padding: 4px 8px;
       border-radius: 8px;
       border: 2px solid #888;
-      width: 100px;
+      width: auto;
+      min-width: 60px;
       text-align: center;
+      cursor: pointer;
     }
-    .radio-group {
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-      margin-top: 10px;
+    .text-input.correct {
+      border-color: green;
+      background-color: #d4f8d4;
+    }
+    .text-input.wrong {
+      border-color: red;
+      background-color: #ffd6d6;
     }
     .celebration {
       font-size: 32px;
@@ -98,116 +102,223 @@
     <div id="answer-container" class="answer-box"></div>
   </div>
 
-<audio id="correct-sound" src="https://www.soundjay.com/buttons/sounds/button-10.mp3" preload="auto"></audio>
+  <audio id="correct-sound" src="https://www.soundjay.com/buttons/sounds/button-10.mp3" preload="auto"></audio>
 
-<script>
-  function numberToWords(num) {
-    const a = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"];
-    const b = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];
+  <script>
+    function numberToWords(num) {
+      const a = ["", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen"];
+      const b = ["", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"];
 
-    if (num < 20) return a[num];
-    if (num < 100) return b[Math.floor(num / 10)] + (num % 10 !== 0 ? " " + a[num % 10] : "");
-    if (num < 1000)
-      return a[Math.floor(num / 100)] + " hundred" + (num % 100 !== 0 ? " " + numberToWords(num % 100) : "");
-    if (num < 10000)
-      return a[Math.floor(num / 1000)] + " thousand" + (num % 1000 !== 0 ? " " + numberToWords(num % 1000) : "");
-  }
+      if (num < 20) return a[num];
+      if (num < 100) return b[Math.floor(num / 10)] + (num % 10 !== 0 ? " " + a[num % 10] : "");
+      if (num < 1000)
+        return a[Math.floor(num / 100)] + " hundred" + (num % 100 !== 0 ? " " + numberToWords(num % 100) : "");
+      if (num < 10000)
+        return a[Math.floor(num / 1000)] + " thousand" + (num % 1000 !== 0 ? " " + numberToWords(num % 1000) : "");
+    }
 
-  function hideHalfLetters(word) {
-    const chars = word.split('');
-    const indices = chars.map((c, i) => /[a-zA-Z]/.test(c) ? i : -1).filter(i => i >= 0);
-    const toHide = indices.sort(() => 0.5 - Math.random()).slice(0, indices.length / 2);
-    const masked = chars.map((c, i) => toHide.includes(i) ? '_' : c).join('');
-    const missing = toHide.map(i => chars[i]);
-    return { masked, missing };
-  }
+    function hideHalfLetters(word) {
+      const chars = word.split('');
+      const indices = chars.map((c, i) => /[a-zA-Z]/.test(c) ? i : -1).filter(i => i >= 0);
+      const toHide = indices.sort(() => 0.5 - Math.random()).slice(0, indices.length / 2);
+      const masked = chars.map((c, i) => toHide.includes(i) ? '_' : c).join('');
+      return { masked, missing: toHide.map(i => chars[i]) };
+    }
 
-  function generateQuestions() {
-    const questions = [];
-    for (let i = 0; i < 20; i++) {
-      const type = ["name-to-digit", "digit-to-name", "comparison", "sequence", "largest", "smallest"][Math.floor(Math.random() * 6)];
+    function generateQuestions() {
+      const questions = [];
+      for (let i = 0; i < 20; i++) {
+        const type = ["name-to-digit", "digit-to-name", "comparison", "sequence", "largest", "smallest"][Math.floor(Math.random() * 6)];
 
-      if (type === "name-to-digit") {
-        const num = 1000 + Math.floor(Math.random() * 9000);
-        questions.push({ type, question: numberToWords(num), answer: String(num) });
+        if (type === "name-to-digit") {
+          const num = 1000 + Math.floor(Math.random() * 9000);
+          questions.push({ type, question: numberToWords(num), answer: String(num) });
 
-      } else if (type === "digit-to-name") {
-        const num = 1000 + Math.floor(Math.random() * 9000);
-        const word = numberToWords(num);
-        const { masked, missing } = hideHalfLetters(word);
-        questions.push({ type, question: String(num), masked, answer: word, missing });
+        } else if (type === "digit-to-name") {
+          const num = 1000 + Math.floor(Math.random() * 9000);
+          const word = numberToWords(num);
+          const { masked, missing } = hideHalfLetters(word);
+          questions.push({ type, question: String(num), masked, answer: word, missing });
 
-      } else if (type === "comparison") {
-        const left = `${1000 + Math.floor(Math.random() * 9000)} ${Math.random() < 0.5 ? '+' : '-'} ${1 + Math.floor(Math.random() * 20)}`;
-        const right = `${1000 + Math.floor(Math.random() * 9000)} ${Math.random() < 0.5 ? '+' : '-'} ${1 + Math.floor(Math.random() * 20)}`;
-        const l = eval(left), r = eval(right);
-        const ans = l > r ? '>' : l < r ? '<' : '=';
-        questions.push({ type, question: `${left} ? ${right}`, answer: ans });
+        } else if (type === "comparison") {
+          const left = `${1000 + Math.floor(Math.random() * 9000)} ${Math.random() < 0.5 ? '+' : '-'} ${1 + Math.floor(Math.random() * 20)}`;
+          const right = `${1000 + Math.floor(Math.random() * 9000)} ${Math.random() < 0.5 ? '+' : '-'} ${1 + Math.floor(Math.random() * 20)}`;
+          const l = eval(left), r = eval(right);
+          const ans = l > r ? '>' : l < r ? '<' : '=';
+          questions.push({ type, question: `${left} ? ${right}`, answer: ans });
 
-      } else if (type === "sequence") {
-        const base = 1000 + Math.floor(Math.random() * 8000);
-        const front = Math.random() < 0.5;
-        questions.push({
-          type,
-          question: front ? `_, ${base + 1}, ${base + 2}` : `${base}, _, _`,
-          answer: front ? [`${base}`] : [`${base + 1}`, `${base + 2}`]
+        } else if (type === "sequence") {
+          const base = 1000 + Math.floor(Math.random() * 8000);
+          const front = Math.random() < 0.5;
+          questions.push({
+            type,
+            question: front ? `_, ${base + 1}, ${base + 2}` : `${base}, _, _`,
+            answer: front ? [`${base}`] : [`${base + 1}`, `${base + 2}`]
+          });
+
+        } else if (type === "largest" || type === "smallest") {
+          const sample = Array.from({ length: 4 }, () => 1000 + Math.floor(Math.random() * 9000));
+          const labels = ['a', 'b', 'c', 'd'];
+          const entries = labels.map((l, i) => [l, sample[i]]);
+          const ans = entries.reduce((acc, cur) =>
+            type === 'largest' ? (cur[1] > acc[1] ? cur : acc) : (cur[1] < acc[1] ? cur : acc))[0];
+          questions.push({ type, entries, question: entries.map(([l, v]) => `${l} = ${v}`).join(', '), answer: ans });
+        }
+      }
+      return questions;
+    }
+
+    function renderSequenceInputs(expectedValues) {
+      const container = document.getElementById('answer-container');
+      container.innerHTML = '';
+      const inputs = [];
+      expectedValues.forEach((val, i) => {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'text-input';
+        input.dataset.index = i;
+        input.dataset.expected = val;
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            const currentVal = input.value.trim();
+            if (currentVal === input.dataset.expected) {
+              input.classList.remove('wrong');
+              input.classList.add('correct');
+              const nextInput = inputs[i + 1];
+              if (nextInput) {
+                nextInput.focus();
+              } else {
+                document.getElementById('correct-sound').play();
+                setTimeout(() => {
+                  current++;
+                  renderQuestion();
+                }, 500);
+              }
+            } else {
+              input.classList.remove('correct');
+              input.classList.add('wrong');
+              input.select();
+            }
+          }
+        });
+        inputs.push(input);
+        container.appendChild(input);
+      });
+      if (inputs.length) inputs[0].focus();
+    }
+
+    const questions = generateQuestions();
+    let current = 0;
+    const sound = document.getElementById('correct-sound');
+
+    function renderQuestion() {
+      if (current >= questions.length) {
+        document.getElementById('question-title').textContent = "Game Over!";
+        document.getElementById('question-label').textContent = "";
+        document.getElementById('question-content').textContent = "You finished all the questions!";
+        document.getElementById('answer-container').innerHTML = "";
+        return;
+      }
+
+      const q = questions[current];
+      document.getElementById('question-title').textContent = `Question ${current + 1} of ${questions.length}`;
+      document.getElementById('question-label').textContent = q.type.replace(/-/g, ' ').toUpperCase();
+      document.getElementById('question-content').textContent = q.question;
+      const container = document.getElementById('answer-container');
+      container.innerHTML = '';
+
+      if (q.type === "name-to-digit") {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'text-input';
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            if (input.value.trim() === q.answer) {
+              input.classList.add('correct');
+              sound.play();
+              setTimeout(() => { current++; renderQuestion(); }, 500);
+            } else {
+              input.classList.add('wrong');
+              input.select();
+            }
+          }
+        });
+        container.appendChild(input);
+        input.focus();
+
+      } else if (q.type === "digit-to-name") {
+        q.masked.split('').forEach((char, i) => {
+          const input = document.createElement('input');
+          input.maxLength = 1;
+          input.className = 'letter-input';
+          if (char === '_') {
+            input.dataset.expected = q.answer[i];
+            input.addEventListener('keydown', (e) => {
+              if (e.key.length === 1) {
+                const expected = input.dataset.expected.toLowerCase();
+                if (e.key.toLowerCase() === expected) {
+                  input.value = e.key;
+                  input.classList.add('correct');
+                  input.classList.remove('wrong');
+                  sound.play();
+                  const allFilled = [...container.children].every(inp => inp.classList.contains('correct') || inp.disabled);
+                  if (allFilled) {
+                    setTimeout(() => { current++; renderQuestion(); }, 500);
+                  }
+                } else {
+                  input.classList.add('wrong');
+                  input.select();
+                }
+              }
+            });
+          } else {
+            input.value = char;
+            input.disabled = true;
+          }
+          container.appendChild(input);
         });
 
-      } else if (type === "largest" || type === "smallest") {
-        const sample = Array.from({ length: 4 }, () => 1000 + Math.floor(Math.random() * 9000));
-        const labels = ['a', 'b', 'c', 'd'];
-        const entries = labels.map((l, i) => [l, sample[i]]);
-        const ans = entries.reduce((acc, cur) =>
-          type === 'largest' ? (cur[1] > acc[1] ? cur : acc) : (cur[1] < acc[1] ? cur : acc))[0];
-        questions.push({ type, entries, question: entries.map(([l, v]) => `${l} = ${v}`).join(', '), answer: ans });
+      } else if (q.type === "comparison") {
+        const options = ['>', '<', '='];
+        options.forEach(op => {
+          const btn = document.createElement('button');
+          btn.textContent = op;
+          btn.onclick = () => {
+            if (op === q.answer) {
+              sound.play();
+              btn.classList.add('correct');
+              setTimeout(() => { current++; renderQuestion(); }, 500);
+            } else {
+              btn.classList.add('wrong');
+            }
+          };
+          btn.className = 'text-input';
+          container.appendChild(btn);
+        });
+
+      } else if (q.type === "sequence") {
+        renderSequenceInputs(q.answer);
+
+      } else if (q.type === "largest" || q.type === "smallest") {
+        q.entries.forEach(([label, value]) => {
+          const btn = document.createElement('button');
+          btn.textContent = `${label} = ${value}`;
+          btn.onclick = () => {
+            if (label === q.answer) {
+              sound.play();
+              btn.classList.add('correct');
+              setTimeout(() => { current++; renderQuestion(); }, 500);
+            } else {
+              btn.classList.add('wrong');
+            }
+          };
+          btn.className = 'text-input';
+          container.appendChild(btn);
+        });
       }
     }
-    return questions;
-  }
 
-  function renderSequenceInputs(expectedValues) {
-    const container = document.getElementById('answer-container');
-    container.innerHTML = '';
-    const inputs = [];
-    expectedValues.forEach((val, i) => {
-      const input = document.createElement('input');
-      input.type = 'text';
-      input.className = 'text-input';
-      input.dataset.index = i;
-      input.dataset.expected = val;
-      input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-          const currentVal = input.value.trim();
-          if (currentVal === input.dataset.expected) {
-            input.classList.remove('wrong');
-            input.classList.add('correct');
-            const nextInput = inputs[i + 1];
-            if (nextInput) {
-              nextInput.focus();
-            } else {
-              document.getElementById('correct-sound').play();
-              setTimeout(() => {
-                current++;
-                renderQuestion();
-              }, 500);
-            }
-          } else {
-            input.classList.remove('correct');
-            input.classList.add('wrong');
-            input.select();
-          }
-        }
-      });
-      inputs.push(input);
-      container.appendChild(input);
-    });
-    if (inputs.length) inputs[0].focus();
-  }
-
-  const questions = generateQuestions();
-  let current = 0;
-  const sound = document.getElementById('correct-sound');
-  // renderQuestion would go here
-</script>
+    renderQuestion();
+  </script>
 </body>
 </html>
